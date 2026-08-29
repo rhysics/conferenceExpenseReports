@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+.venv/
+
+# generated artifacts from running the tool in this repo (examples/, tests/)
+.fx_cache.json
+*-build/
+*-expense-report.pdf

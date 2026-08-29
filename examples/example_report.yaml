@@ -1,0 +1,29 @@
+person: "Jane Doe"
+conference name: "Example Conference on Testing 2026"
+conference link: "https://example.org/conf2026"
+conference start date: 2026-06-01
+conference end date: 2026-06-05
+session: "Keynote: Testing at Scale"
+session link: "https://example.org/conf2026/sessions/keynote"
+grant acknowledged: true
+grant reference: "SNSF-123456"
+notes: "Attended as an invited speaker."
+receipts folder: "receipts"
+date format: "%d %B %Y"
+
+expenses:
+  a:
+    name: "Registration fee"
+    cost: 350.00
+    purchase date: 2026-05-10
+    currency: USD
+    invoice: "registration.png"
+    note: "Early-bird rate"
+  b:
+    name: "Flight (ZRH-JFK return)"
+    cost: 780.50
+    purchase date: 2026-05-15
+    currency: EUR
+    note: "Booked via travel agent, no invoice on file"
+
+extra notes: "Per diem meal costs were pre-approved by the department administrator and are not itemized here."

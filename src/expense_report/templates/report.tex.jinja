@@ -1,0 +1,100 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{pdfpages}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage[hidelinks,colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
+
+\setlength{\parindent}{0pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{(( conference_name | latex ))}
+\rhead{Page \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{Conference Expense Report}}\\[0.6em]
+    ((* if conference_link *))
+    {\large \href{(( conference_link ))}{(( conference_name | latex ))}}
+    ((* else *))
+    {\large (( conference_name | latex ))}
+    ((* endif *))
+\end{center}
+
+\vspace{1em}
+
+\begin{tabular}{@{}p{4cm}p{11cm}@{}}
+\textbf{Submitted by:} & (( person | latex )) \\
+\textbf{Conference dates:} & (( start_date_display )) -- (( end_date_display )) \\
+\textbf{Session:} &
+    ((* if session_link *))\href{(( session_link ))}{(( session | latex ))}((* else *))(( session | latex ))((* endif *)) \\
+\textbf{Grant funding acknowledged:} & ((* if grant_acknowledged *))Yes((* else *))No((* endif *)) \\
+((* if grant_reference *))
+\textbf{Grant reference:} & (( grant_reference | latex )) \\
+((* endif *))
+((* if notes *))
+\textbf{Notes:} & (( notes | latex )) \\
+((* endif *))
+\end{tabular}
+
+\vspace{1.5em}
+
+\textbf{Expense Summary}\\[0.5em]
+
+\begin{longtable}{@{}p{4cm}rrrp{4.3cm}@{}}
+\toprule
+\textbf{Expense} & \textbf{Paid} & \textbf{CHF} & \textbf{USD} & \textbf{Notes} \\
+\midrule
+\endhead
+((* for e in expenses *))
+(( e.name | latex ))
+    & (( "%.2f"|format(e.cost) )) (( e.currency ))
+    & (( "%.2f"|format(e.chf) ))
+    & (( "%.2f"|format(e.usd) ))
+    & (( e.note | latex )) \\
+((* endfor *))
+\midrule
+\textbf{Total} & & \textbf{(( "%.2f"|format(total_chf) ))} & \textbf{(( "%.2f"|format(total_usd) ))} & \\
+\bottomrule
+\end{longtable}
+
+\vspace{0.5em}
+\footnotesize Amounts converted using European Central Bank reference rates via the \href{https://frankfurter.dev/}{Frankfurter API}, using the exchange rate for each expense's purchase date.
+\normalsize
+
+((* if extra_notes *))
+\vspace{1em}
+\textbf{Additional notes:} (( extra_notes | latex ))
+((* endif *))
+
+\vfill
+\begin{center}
+\footnotesize Report generated with \href{https://github.com/rhysics/conferenceExpenseReports}{https://github.com/rhysics/conferenceExpenseReports}
+\end{center}
+
+((* for e in expenses *))
+((* if e.invoice_path *))
+\clearpage
+\fancyhead[L]{Invoice: (( e.name | latex ))}
+((* if e.invoice_is_pdf *))
+\includepdf[pages=-,pagecommand={\thispagestyle{fancy}}]{(( e.invoice_path ))}
+((* else *))
+\thispagestyle{fancy}
+\vspace*{\fill}
+\begin{center}
+\includegraphics[width=\linewidth,height=0.85\textheight,keepaspectratio]{(( e.invoice_path ))}
+\end{center}
+\vspace*{\fill}
+((* endif *))
+((* endif *))
+((* endfor *))
+
+\end{document}

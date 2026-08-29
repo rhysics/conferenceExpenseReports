@@ -1,0 +1,82 @@
+# conferenceExpenseReports
+
+Generate a LaTeX-typeset conference expense report — a summary page followed
+by every invoice — for submission to a university reimbursement process,
+from a single YAML file.
+
+## Requirements
+
+- Python 3.10+
+- A TeX distribution providing `xelatex` on `PATH` (e.g. MacTeX, TeX Live),
+  with the (standard) `pdfpages`, `longtable`, `booktabs`, `hyperref`,
+  `fancyhdr`, `lastpage` and `grffile` packages available.
+
+## Installation
+
+```sh
+pip install -e .
+```
+
+This installs the `expense-report` CLI.
+
+## Usage
+
+```sh
+expense-report validate report.yaml
+expense-report generate report.yaml -o report.pdf
+```
+
+- `validate` checks the YAML structure, required fields, dates, currency
+  codes, and that every referenced invoice file exists in the receipts
+  folder. It runs fully offline.
+- `generate` re-validates, looks up historical CHF/USD exchange rates for
+  each expense's purchase date via the [Frankfurter API](https://frankfurter.dev)
+  (ECB reference rates), and compiles the final PDF. Rates are cached in a
+  `.fx_cache.json` file next to the YAML file so repeat runs don't re-hit the
+  network. Pass `--keep-build` to keep the generated `.tex` source and
+  `xelatex` log for debugging.
+
+See [`examples/example_report.yaml`](examples/example_report.yaml) for a
+complete example.
+
+## YAML schema
+
+| Field | Required | Notes |
+|---|---|---|
+| `person` | yes | Name of the person submitting the claim |
+| `conference name` | yes | |
+| `conference link` | no | Rendered as a hyperlink on the conference name |
+| `conference start date` | yes | Plain YAML date, e.g. `2026-06-01` |
+| `conference end date` | yes | Plain YAML date |
+| `session` | yes | The talk/session attended or given |
+| `session link` | no | Rendered as a hyperlink on the session |
+| `grant acknowledged` | no | `true`/`false` |
+| `grant reference` | no | Grant number/name; shown only when given. A warning is raised if `grant acknowledged` is true but this is missing (or vice versa) |
+| `notes` | no | Free text shown near the top of the report |
+| `receipts folder` | yes | Path (relative to the YAML file) containing invoice files |
+| `date format` | yes | A `strftime` pattern controlling how dates are *displayed*, e.g. `"%d %B %Y"` |
+| `expenses` | yes | Mapping of arbitrary keys to expense entries (see below) |
+| `extra notes` | no | Free text shown after the summary table |
+
+Each entry under `expenses` (key is arbitrary, e.g. `a`, `b`, `flight`, ...):
+
+| Field | Required | Notes |
+|---|---|---|
+| `name` | yes | Shown in the summary table |
+| `cost` | yes | Numeric, in the original currency paid |
+| `purchase date` | yes | Plain YAML date; used for the FX lookup |
+| `currency` | yes | 3-letter ISO 4217 code, e.g. `EUR`, `USD`, `CHF` |
+| `invoice` | no | Exact filename of the receipt inside `receipts folder`. Supported types: `.pdf`, `.png`, `.jpg`, `.jpeg`. Omit if there's no receipt for this line item. |
+| `note` | no | Shown in the summary table's Notes column |
+
+Dates are given as plain YAML dates (not strings) so parsing is unambiguous;
+`date format` only controls how they're *displayed* in the PDF.
+
+## Output
+
+Page 1 is the conference summary: conference/session details, an expense
+table (Expense | Paid | CHF | USD | Notes) with a totals row, a note on the
+FX methodology (European Central Bank reference rates via the Frankfurter
+API, linked), and a footer crediting this project. Every expense with an
+`invoice` gets its receipt appended afterward, one per page, labeled with the
+expense name so it's easy to match back to the summary table.
