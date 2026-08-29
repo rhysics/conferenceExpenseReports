@@ -6,9 +6,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+
+DEFAULT_REPORT_CURRENCIES = ["CHF", "USD"]
 
 
 @dataclass
@@ -36,6 +38,7 @@ class Report:
     session_link: str | None = None
     grant_acknowledged: bool = False
     grant_reference: str | None = None
+    report_currencies: list[str] = field(default_factory=lambda: list(DEFAULT_REPORT_CURRENCIES))
     notes: str | None = None
     extra_notes: str | None = None
 
@@ -69,6 +72,7 @@ def parse_report(raw: dict, yaml_path: Path) -> Report:
         session_link=raw.get("session link"),
         grant_acknowledged=bool(raw.get("grant acknowledged", False)),
         grant_reference=raw.get("grant reference"),
+        report_currencies=[c.upper() for c in raw.get("report currencies", DEFAULT_REPORT_CURRENCIES)],
         notes=raw.get("notes"),
         extra_notes=raw.get("extra notes"),
     )

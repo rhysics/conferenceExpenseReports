@@ -5,6 +5,7 @@ __pycache__/
 build/
 dist/
 .venv/
+reports/
 
 # generated artifacts from running the tool in this repo (examples/, tests/)
 .fx_cache.json

@@ -50,20 +50,19 @@
 
 \textbf{Expense Summary}\\[0.5em]
 
-\begin{longtable}{@{}p{4cm}rrrp{4.3cm}@{}}
+\begin{longtable}{@{}p{4cm}r((* for c in report_currencies *))r((* endfor *))p{4cm}@{}}
 \toprule
-\textbf{Expense} & \textbf{Paid} & \textbf{CHF} & \textbf{USD} & \textbf{Notes} \\
+\textbf{Expense} & \textbf{Paid}((* for c in report_currencies *)) & \textbf{(( c ))}((* endfor *)) & \textbf{Notes} \\
 \midrule
 \endhead
 ((* for e in expenses *))
 (( e.name | latex ))
     & (( "%.2f"|format(e.cost) )) (( e.currency ))
-    & (( "%.2f"|format(e.chf) ))
-    & (( "%.2f"|format(e.usd) ))
-    & (( e.note | latex )) \\
+    ((* for amt in e.amounts *))& (( "%.2f"|format(amt) ))
+    ((* endfor *))& (( e.note | latex )) \\
 ((* endfor *))
 \midrule
-\textbf{Total} & & \textbf{(( "%.2f"|format(total_chf) ))} & \textbf{(( "%.2f"|format(total_usd) ))} & \\
+\textbf{Total} &((* for t in totals *)) & \textbf{(( "%.2f"|format(t) ))}((* endfor *)) & \\
 \bottomrule
 \end{longtable}
 

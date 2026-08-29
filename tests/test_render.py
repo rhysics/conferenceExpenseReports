@@ -17,9 +17,11 @@ def test_latex_escape_none_is_empty_string():
     assert latex_escape(None) == ""
 
 
-def _render(expenses, **overrides):
+def _render(expenses, report_currencies=("CHF", "USD"), totals=None, **overrides):
     env = get_environment()
     template = env.get_template("report.tex.jinja")
+    if totals is None:
+        totals = [0.0] * len(report_currencies)
     context = dict(
         conference_name="PyCon",
         conference_link=None,
@@ -32,9 +34,9 @@ def _render(expenses, **overrides):
         grant_reference=None,
         notes=None,
         extra_notes=None,
+        report_currencies=list(report_currencies),
         expenses=expenses,
-        total_chf=0.0,
-        total_usd=0.0,
+        totals=totals,
     )
     context.update(overrides)
     return template.render(**context)
@@ -45,13 +47,12 @@ def test_template_renders_expense_row_and_escapes_name():
         name="Flight & Hotel",
         cost=100.0,
         currency="EUR",
-        chf=95.0,
-        usd=108.0,
+        amounts=[95.0, 108.0],
         note="round trip",
         invoice_path=None,
         invoice_is_pdf=False,
     )
-    tex = _render([expense], total_chf=95.0, total_usd=108.0)
+    tex = _render([expense], totals=[95.0, 108.0])
 
     assert r"Flight \& Hotel" in tex
     assert "95.00" in tex
@@ -64,8 +65,7 @@ def test_template_includes_pdf_invoice_block():
         name="Flight",
         cost=100.0,
         currency="EUR",
-        chf=95.0,
-        usd=108.0,
+        amounts=[95.0, 108.0],
         note=None,
         invoice_path="invoice_a.pdf",
         invoice_is_pdf=True,
@@ -80,8 +80,7 @@ def test_template_includes_image_invoice_block():
         name="Registration",
         cost=100.0,
         currency="USD",
-        chf=95.0,
-        usd=100.0,
+        amounts=[95.0, 100.0],
         note=None,
         invoice_path="invoice_a.png",
         invoice_is_pdf=False,
@@ -105,3 +104,59 @@ def test_template_shows_grant_reference_when_given():
 def test_template_omits_grant_reference_when_absent():
     tex = _render([], grant_reference=None)
     assert "Grant reference" not in tex
+
+
+def test_us_mode_single_currency_column():
+    expense = ExpenseView(
+        name="Registration",
+        cost=350.0,
+        currency="USD",
+        amounts=[350.0],
+        note=None,
+        invoice_path=None,
+        invoice_is_pdf=False,
+    )
+    tex = _render([expense], report_currencies=("USD",), totals=[350.0])
+
+    assert r"\textbf{USD}" in tex
+    assert r"\textbf{CHF}" not in tex
+    assert tex.count("350.00") >= 2  # once in "Paid", once in the USD column
+
+
+def test_korea_mode_three_currency_columns():
+    expense = ExpenseView(
+        name="Flight",
+        cost=100.0,
+        currency="EUR",
+        amounts=[145000.0, 95.0, 108.0],
+        note=None,
+        invoice_path=None,
+        invoice_is_pdf=False,
+    )
+    tex = _render(
+        [expense],
+        report_currencies=("KRW", "CHF", "USD"),
+        totals=[145000.0, 95.0, 108.0],
+    )
+
+    assert r"\textbf{KRW}" in tex
+    assert r"\textbf{CHF}" in tex
+    assert r"\textbf{USD}" in tex
+    assert "145000.00" in tex
+
+
+def test_kek_mode_two_currency_columns():
+    expense = ExpenseView(
+        name="Hotel",
+        cost=200.0,
+        currency="USD",
+        amounts=[30000.0, 200.0],
+        note=None,
+        invoice_path=None,
+        invoice_is_pdf=False,
+    )
+    tex = _render([expense], report_currencies=("JPY", "USD"), totals=[30000.0, 200.0])
+
+    assert r"\textbf{JPY}" in tex
+    assert r"\textbf{USD}" in tex
+    assert r"\textbf{CHF}" not in tex

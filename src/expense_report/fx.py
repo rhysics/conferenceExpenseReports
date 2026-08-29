@@ -9,13 +9,13 @@ network, and report generation can be repeated offline afterwards.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import date, timedelta
 from pathlib import Path
 
 import requests
 
 FRANKFURTER_URL = "https://api.frankfurter.dev/v1/{date}"
-TARGET_CURRENCIES = ("CHF", "USD")
 MAX_FALLBACK_DAYS = 7
 REQUEST_TIMEOUT = 10
 
@@ -25,7 +25,7 @@ class FxError(RuntimeError):
 
 
 class FxCache:
-    """A small on-disk JSON cache keyed by (date, base currency)."""
+    """A small on-disk JSON cache keyed by (date, base currency, target currencies)."""
 
     def __init__(self, path: Path):
         self.path = path
@@ -47,23 +47,25 @@ class FxCache:
             pass
 
 
-def _cache_key(d: date, base: str) -> str:
-    return f"{d.isoformat()}|{base}"
+def _cache_key(d: date, base: str, targets: Sequence[str]) -> str:
+    sorted_targets = ",".join(sorted(t.upper() for t in targets))
+    return f"{d.isoformat()}|{base}|{sorted_targets}"
 
 
-def get_rates(purchase_date: date, base: str, cache: FxCache) -> tuple[dict[str, float], date]:
+def get_rates(purchase_date: date, base: str, targets: Sequence[str], cache: FxCache) -> tuple[dict[str, float], date]:
     """Return ({currency_code: rate, ...}, actual_date_used).
 
     The returned dict always includes an entry for `base` itself (1.0) plus
-    every other currency in TARGET_CURRENCIES. If Frankfurter has no rate for
+    every currency in `targets`. If Frankfurter has no rate for
     `purchase_date` (e.g. a weekend/bank holiday), earlier dates are tried
     (up to MAX_FALLBACK_DAYS) and the date actually used is returned so the
     caller can surface that fallback to the user.
     """
     base = base.upper()
-    symbols = [c for c in TARGET_CURRENCIES if c != base]
+    targets = [t.upper() for t in targets]
+    symbols = [c for c in targets if c != base]
 
-    cache_key = _cache_key(purchase_date, base)
+    cache_key = _cache_key(purchase_date, base, targets)
     cached = cache.get(cache_key)
     if cached is not None:
         rates = dict(cached["rates"])

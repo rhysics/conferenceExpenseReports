@@ -10,6 +10,7 @@ grant reference: "SNSF-123456"
 notes: "Attended as an invited speaker."
 receipts folder: "receipts"
 date format: "%d %B %Y"
+report currencies: [CHF, USD]
 
 expenses:
   a:

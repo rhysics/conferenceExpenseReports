@@ -144,6 +144,47 @@ def test_grant_reference_must_be_a_string(tmp_path):
     assert any(i.path == "grant reference" and i.level == "error" for i in issues)
 
 
+def test_report_currencies_omitted_is_fine(tmp_path):
+    raw = _base_raw(tmp_path)
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_report_currencies_single_currency_is_valid(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["report currencies"] = ["USD"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_report_currencies_multiple_is_valid(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["report currencies"] = ["KRW", "CHF", "USD"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_report_currencies_must_be_a_list(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["report currencies"] = "USD"
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "report currencies" for i in _errors(issues))
+
+
+def test_report_currencies_empty_list_is_an_error(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["report currencies"] = []
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "report currencies" for i in _errors(issues))
+
+
+def test_report_currencies_bad_code_is_an_error(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["report currencies"] = ["USD", "wons"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "report currencies[1]" for i in _errors(issues))
+
+
 def test_unrecognized_field_warns_not_errors(tmp_path):
     raw = _base_raw(tmp_path)
     raw["speling mistake"] = "oops"

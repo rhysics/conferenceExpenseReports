@@ -36,6 +36,7 @@ OPTIONAL_TOP_FIELDS = [
     "grant acknowledged",
     "grant reference",
     "notes",
+    "report currencies",
     "extra notes",
 ]
 
@@ -84,9 +85,7 @@ def validate_report(raw: Any, yaml_path: Path) -> list[Issue]:
 
     grant_acknowledged = raw.get("grant acknowledged")
     if grant_acknowledged is not None and not isinstance(grant_acknowledged, bool):
-        issues.append(
-            Issue("warning", "grant acknowledged", "expected a boolean (yes/no); will be treated as truthy")
-        )
+        issues.append(Issue("warning", "grant acknowledged", "expected a boolean (yes/no); will be treated as truthy"))
 
     grant_reference = raw.get("grant reference")
     if grant_reference is not None and not isinstance(grant_reference, str):
@@ -96,9 +95,22 @@ def validate_report(raw: Any, yaml_path: Path) -> list[Issue]:
             Issue("warning", "grant reference", "grant acknowledged is true but no grant reference was given")
         )
     if grant_reference and not grant_acknowledged:
-        issues.append(
-            Issue("warning", "grant reference", "given but 'grant acknowledged' is not true")
-        )
+        issues.append(Issue("warning", "grant reference", "given but 'grant acknowledged' is not true"))
+
+    report_currencies = raw.get("report currencies")
+    if report_currencies is not None:
+        if not isinstance(report_currencies, list) or not report_currencies:
+            issues.append(Issue("error", "report currencies", "must be a non-empty list of currency codes"))
+        else:
+            for i, code in enumerate(report_currencies):
+                if not isinstance(code, str) or not CURRENCY_RE.match(code.upper()):
+                    issues.append(
+                        Issue(
+                            "error",
+                            f"report currencies[{i}]",
+                            f"must be a 3-letter ISO 4217 code, got {code!r}",
+                        )
+                    )
 
     receipts_dir = None
     receipts_folder = raw.get("receipts folder")
@@ -169,9 +181,7 @@ def _validate_expense(key: Any, entry: Any, receipts_dir: Path | None, issues: l
     currency = entry.get("currency")
     if isinstance(currency, str):
         if not CURRENCY_RE.match(currency.upper()):
-            issues.append(
-                Issue("error", f"{prefix}.currency", f"must be a 3-letter ISO 4217 code, got {currency!r}")
-            )
+            issues.append(Issue("error", f"{prefix}.currency", f"must be a 3-letter ISO 4217 code, got {currency!r}"))
     elif currency is not None:
         issues.append(Issue("error", f"{prefix}.currency", "must be a string currency code"))
 

@@ -29,8 +29,7 @@ class ExpenseView:
     name: str
     cost: float
     currency: str
-    chf: float
-    usd: float
+    amounts: list[float]
     note: str | None
     invoice_path: str | None
     invoice_is_pdf: bool
@@ -86,14 +85,14 @@ def generate_report(
 
 
 def _build(report, build_dir: Path, cache: FxCache) -> Path:
+    report_currencies = report.report_currencies
     expense_views: list[ExpenseView] = []
-    total_chf = 0.0
-    total_usd = 0.0
+    totals = [0.0] * len(report_currencies)
     warnings: list[str] = []
 
     for expense in report.expenses:
         try:
-            rates, used_date = get_rates(expense.purchase_date, expense.currency, cache)
+            rates, used_date = get_rates(expense.purchase_date, expense.currency, report_currencies, cache)
         except FxError as exc:
             raise BuildError(f"expense '{expense.name}': {exc}") from exc
 
@@ -102,10 +101,8 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
                 f"expense '{expense.name}': no FX rate for {expense.purchase_date}, used {used_date} instead"
             )
 
-        chf = expense.cost * rates["CHF"]
-        usd = expense.cost * rates["USD"]
-        total_chf += chf
-        total_usd += usd
+        amounts = [expense.cost * rates[code] for code in report_currencies]
+        totals = [t + a for t, a in zip(totals, amounts, strict=True)]
 
         invoice_path = None
         invoice_is_pdf = False
@@ -122,8 +119,7 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
                 name=expense.name,
                 cost=expense.cost,
                 currency=expense.currency,
-                chf=chf,
-                usd=usd,
+                amounts=amounts,
                 note=expense.note,
                 invoice_path=invoice_path,
                 invoice_is_pdf=invoice_is_pdf,
@@ -144,9 +140,9 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
         grant_reference=report.grant_reference,
         notes=report.notes,
         extra_notes=report.extra_notes,
+        report_currencies=report_currencies,
         expenses=expense_views,
-        total_chf=total_chf,
-        total_usd=total_usd,
+        totals=totals,
     )
 
     tex_path = build_dir / "report.tex"

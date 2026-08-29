@@ -56,6 +56,7 @@ complete example.
 | `receipts folder` | yes | Path (relative to the YAML file) containing invoice files |
 | `date format` | yes | A `strftime` pattern controlling how dates are *displayed*, e.g. `"%d %B %Y"` |
 | `expenses` | yes | Mapping of arbitrary keys to expense entries (see below) |
+| `report currencies` | no | List of ISO 4217 codes controlling which converted-amount columns appear in the summary table, and in what order. Defaults to `[CHF, USD]`. See [Report currency modes](#report-currency-modes) below |
 | `extra notes` | no | Free text shown after the summary table |
 
 Each entry under `expenses` (key is arbitrary, e.g. `a`, `b`, `flight`, ...):
@@ -71,6 +72,24 @@ Each entry under `expenses` (key is arbitrary, e.g. `a`, `b`, `flight`, ...):
 
 Dates are given as plain YAML dates (not strings) so parsing is unambiguous;
 `date format` only controls how they're *displayed* in the PDF.
+
+### Report currency modes
+
+The summary table always shows an **Expense** column, a **Paid** column (the
+original amount and currency for each expense), and a **Notes** column. In
+between, `report currencies` controls which converted-amount columns appear
+and in what order — one column per currency listed, each converted using the
+exchange rate for that expense's purchase date. Some useful configurations:
+
+| Scenario | `report currencies:` | Columns |
+|---|---|---|
+| Default (omit the key) | *(none — defaults to `[CHF, USD]`)* | Expense, Paid, CHF, USD, Notes |
+| US-only reimbursement | `[USD]` | Expense, Paid, USD, Notes |
+| Korea-affiliated group | `[KRW, CHF, USD]` | Expense, Paid, KRW, CHF, USD, Notes |
+
+Any other Frankfurter-supported ISO 4217 code works too (e.g. `[GBP, USD]`
+for a UK grant) — this isn't a fixed set of "modes," just a list you can
+tailor per report.
 
 ### Common currency codes
 
@@ -96,8 +115,25 @@ Dates are given as plain YAML dates (not strings) so parsing is unambiguous;
 ## Output
 
 Page 1 is the conference summary: conference/session details, an expense
-table (Expense | Paid | CHF | USD | Notes) with a totals row, a note on the
-FX methodology (European Central Bank reference rates via the Frankfurter
-API, linked), and a footer crediting this project. Every expense with an
-`invoice` gets its receipt appended afterward, one per page, labeled with the
-expense name so it's easy to match back to the summary table.
+table (Expense | Paid | one column per `report currencies` entry | Notes)
+with a totals row, a note on the FX methodology (European Central Bank
+reference rates via the Frankfurter API, linked), and a footer crediting this
+project. Every expense with an `invoice` gets its receipt appended
+afterward, one per page, labeled with the expense name so it's easy to match
+back to the summary table.
+
+## Development
+
+```sh
+pip install -e ".[dev]"
+pre-commit install
+```
+
+This runs [ruff](https://docs.astral.sh/ruff/) (lint + format) and basic file
+hygiene checks (trailing whitespace, YAML/TOML syntax, no accidental
+large-file or merge-conflict commits) on every `git commit`. Run it manually
+against everything with:
+
+```sh
+pre-commit run --all-files
+```

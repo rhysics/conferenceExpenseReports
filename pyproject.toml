@@ -20,6 +20,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pre-commit>=3.6",
+    "ruff>=0.6",
 ]
 
 [project.scripts]
@@ -27,3 +29,13 @@ expense-report = "expense_report.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/expense_report"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: typer's documented pattern is `param: T = typer.Argument(...)` / `typer.Option(...)`
+# as the default value, which this rule otherwise flags as a mutable-default footgun.
+ignore = ["B008"]
