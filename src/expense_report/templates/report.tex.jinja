@@ -20,14 +20,12 @@
 
 \begin{document}
 
-\begin{center}
     {\LARGE \textbf{Conference Expense Report}}\\[0.6em]
     ((* if conference_link *))
     {\large \href{(( conference_link ))}{(( conference_name | latex ))}}
     ((* else *))
     {\large (( conference_name | latex ))}
     ((* endif *))
-\end{center}
 
 \vspace{1em}
 
