@@ -34,6 +34,9 @@
 \begin{tabular}{@{}p{4cm}p{11cm}@{}}
 \textbf{Submitted by:} & (( person | latex )) \\
 \textbf{Conference dates:} & (( start_date_display )) -- (( end_date_display )) \\
+((* if conference_link *))
+\textbf{Conference Agenda:} & \url{(( conference_link ))} \\
+((* endif *))
 \textbf{Session:} &
     ((* if session_link *))\href{(( session_link ))}{(( session | latex ))}((* else *))(( session | latex ))((* endif *)) \\
 \textbf{Grant funding acknowledged:} & ((* if grant_acknowledged *))Yes((* else *))No((* endif *)) \\
