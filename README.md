@@ -72,6 +72,27 @@ Each entry under `expenses` (key is arbitrary, e.g. `a`, `b`, `flight`, ...):
 Dates are given as plain YAML dates (not strings) so parsing is unambiguous;
 `date format` only controls how they're *displayed* in the PDF.
 
+### Common currency codes
+
+`currency` accepts any 3-letter ISO 4217 code supported by the
+[Frankfurter API](https://frankfurter.dev). Some common examples listed below; see the API docs for a full list.
+
+| Code | Currency |
+|---|---|
+| `USD` | US Dollar |
+| `CHF` | Swiss Franc |
+| `EUR` | Euro |
+| `GBP` | British Pound |
+| `JPY` | Japanese Yen |
+| `CNY` | Chinese Yuan |
+| `CAD` | Canadian Dollar |
+| `INR` | Indian Rupee |
+| `KRW` | South Korean Won |
+| `AUD` | Australian Dollar |
+| `SEK` | Swedish Krona |
+| `PLN` | Polish Złoty |
+| `CZK` | Czech Koruna |
+
 ## Output
 
 Page 1 is the conference summary: conference/session details, an expense
