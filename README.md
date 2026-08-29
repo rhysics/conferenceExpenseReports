@@ -84,8 +84,10 @@ exchange rate for that expense's purchase date. Some useful configurations:
 | Scenario | `report currencies:` | Columns |
 |---|---|---|
 | Default (omit the key) | *(none — defaults to `[CHF, USD]`)* | Expense, Paid, CHF, USD, Notes |
+| US at CERN reimbursement | `[CHF, USD]` | Expense, Paid, USD, Notes |
 | US-only reimbursement | `[USD]` | Expense, Paid, USD, Notes |
 | Korea-affiliated group | `[KRW, CHF, USD]` | Expense, Paid, KRW, CHF, USD, Notes |
+| European group at CERN | `[CHF, EUR]` | Expense, Paid, CHF, EUR, Notes |
 
 Any other Frankfurter-supported ISO 4217 code works too (e.g. `[GBP, USD]`
 for a UK grant) — this isn't a fixed set of "modes," just a list you can
