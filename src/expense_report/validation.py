@@ -35,13 +35,16 @@ OPTIONAL_TOP_FIELDS = [
     "session link",
     "grant acknowledged",
     "grant reference",
+    "research group",
     "notes",
     "report currencies",
+    "additional documents",
+    "include signature",
     "extra notes",
 ]
 
 REQUIRED_EXPENSE_FIELDS = ["name", "cost", "purchase date", "currency"]
-OPTIONAL_EXPENSE_FIELDS = ["invoice", "note"]
+OPTIONAL_EXPENSE_FIELDS = ["invoice", "note", "prepaid"]
 
 KNOWN_TOP_FIELDS = set(REQUIRED_TOP_FIELDS) | set(OPTIONAL_TOP_FIELDS)
 KNOWN_EXPENSE_FIELDS = set(REQUIRED_EXPENSE_FIELDS) | set(OPTIONAL_EXPENSE_FIELDS)
@@ -97,6 +100,14 @@ def validate_report(raw: Any, yaml_path: Path) -> list[Issue]:
     if grant_reference and not grant_acknowledged:
         issues.append(Issue("warning", "grant reference", "given but 'grant acknowledged' is not true"))
 
+    research_group = raw.get("research group")
+    if research_group is not None and not isinstance(research_group, str):
+        issues.append(Issue("error", "research group", "must be a string"))
+
+    include_signature = raw.get("include signature")
+    if include_signature is not None and not isinstance(include_signature, bool):
+        issues.append(Issue("warning", "include signature", "expected a boolean (yes/no); will be treated as truthy"))
+
     report_currencies = raw.get("report currencies")
     if report_currencies is not None:
         if not isinstance(report_currencies, list) or not report_currencies:
@@ -129,7 +140,40 @@ def validate_report(raw: Any, yaml_path: Path) -> list[Issue]:
             for key, entry in expenses.items():
                 _validate_expense(key, entry, receipts_dir, issues)
 
+    additional_documents = raw.get("additional documents")
+    if additional_documents is not None:
+        if not isinstance(additional_documents, list):
+            issues.append(Issue("error", "additional documents", "must be a list"))
+        else:
+            for i, item in enumerate(additional_documents):
+                _validate_additional_document(i, item, receipts_dir, issues)
+
     return issues
+
+
+def _validate_additional_document(index: int, item: Any, receipts_dir: Path | None, issues: list[Issue]) -> None:
+    prefix = f"additional documents[{index}]"
+
+    if isinstance(item, str):
+        filename = item
+        file_prefix = prefix
+    elif isinstance(item, dict):
+        filename = item.get("file")
+        file_prefix = f"{prefix}.file"
+        if not filename or not isinstance(filename, str):
+            issues.append(Issue("error", file_prefix, "required field is missing or empty"))
+            return
+        label = item.get("label")
+        if label is not None and not isinstance(label, str):
+            issues.append(Issue("error", f"{prefix}.label", "must be a string"))
+        for field in item:
+            if field not in ("file", "label"):
+                issues.append(Issue("warning", f"{prefix}.{field}", "unrecognized field (typo?)"))
+    else:
+        issues.append(Issue("error", prefix, "must be a filename string or a mapping with a 'file' key"))
+        return
+
+    _validate_document_file(filename, file_prefix, receipts_dir, issues)
 
 
 def _validate_strftime_pattern(fmt: str, issues: list[Issue]) -> None:
@@ -178,6 +222,10 @@ def _validate_expense(key: Any, entry: Any, receipts_dir: Path | None, issues: l
 
     _check_date(entry.get("purchase date"), f"{prefix}.purchase date", issues)
 
+    prepaid = entry.get("prepaid")
+    if prepaid is not None and not isinstance(prepaid, bool):
+        issues.append(Issue("warning", f"{prefix}.prepaid", "expected a boolean (yes/no); will be treated as truthy"))
+
     currency = entry.get("currency")
     if isinstance(currency, str):
         if not CURRENCY_RE.match(currency.upper()):
@@ -190,14 +238,18 @@ def _validate_expense(key: Any, entry: Any, receipts_dir: Path | None, issues: l
         if not isinstance(invoice, str):
             issues.append(Issue("error", f"{prefix}.invoice", "must be a string filename"))
         else:
-            ext = Path(invoice).suffix.lower()
-            if ext not in ALLOWED_INVOICE_EXTENSIONS:
-                issues.append(
-                    Issue(
-                        "error",
-                        f"{prefix}.invoice",
-                        f"unsupported file type {ext!r}; allowed: {sorted(ALLOWED_INVOICE_EXTENSIONS)}",
-                    )
-                )
-            if receipts_dir is not None and not (receipts_dir / invoice).is_file():
-                issues.append(Issue("error", f"{prefix}.invoice", f"file not found in receipts folder: {invoice}"))
+            _validate_document_file(invoice, f"{prefix}.invoice", receipts_dir, issues)
+
+
+def _validate_document_file(filename: str, prefix: str, receipts_dir: Path | None, issues: list[Issue]) -> None:
+    ext = Path(filename).suffix.lower()
+    if ext not in ALLOWED_INVOICE_EXTENSIONS:
+        issues.append(
+            Issue(
+                "error",
+                prefix,
+                f"unsupported file type {ext!r}; allowed: {sorted(ALLOWED_INVOICE_EXTENSIONS)}",
+            )
+        )
+    if receipts_dir is not None and not (receipts_dir / filename).is_file():
+        issues.append(Issue("error", prefix, f"file not found in receipts folder: {filename}"))

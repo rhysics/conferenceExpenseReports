@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -35,6 +36,13 @@ class ExpenseView:
     invoice_is_pdf: bool
 
 
+@dataclass
+class DocumentView:
+    label: str
+    path: str
+    is_pdf: bool
+
+
 def load_yaml(path: Path):
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -43,6 +51,10 @@ def load_yaml(path: Path):
 def slugify(text: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
     return slug or "conference"
+
+
+def _humanize_filename(stem: str) -> str:
+    return re.sub(r"[_-]+", " ", stem).strip().title()
 
 
 def generate_report(
@@ -86,8 +98,11 @@ def generate_report(
 
 def _build(report, build_dir: Path, cache: FxCache) -> Path:
     report_currencies = report.report_currencies
-    expense_views: list[ExpenseView] = []
+    all_expense_views: list[ExpenseView] = []
+    reimbursable_views: list[ExpenseView] = []
+    prepaid_views: list[ExpenseView] = []
     totals = [0.0] * len(report_currencies)
+    prepaid_totals = [0.0] * len(report_currencies)
     warnings: list[str] = []
 
     for expense in report.expenses:
@@ -102,7 +117,6 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
             )
 
         amounts = [expense.cost * rates[code] for code in report_currencies]
-        totals = [t + a for t, a in zip(totals, amounts, strict=True)]
 
         invoice_path = None
         invoice_is_pdf = False
@@ -114,15 +128,35 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
             shutil.copy(src, build_dir / dest_name)
             invoice_path = dest_name
 
-        expense_views.append(
-            ExpenseView(
-                name=expense.name,
-                cost=expense.cost,
-                currency=expense.currency,
-                amounts=amounts,
-                note=expense.note,
-                invoice_path=invoice_path,
-                invoice_is_pdf=invoice_is_pdf,
+        view = ExpenseView(
+            name=expense.name,
+            cost=expense.cost,
+            currency=expense.currency,
+            amounts=amounts,
+            note=expense.note,
+            invoice_path=invoice_path,
+            invoice_is_pdf=invoice_is_pdf,
+        )
+        all_expense_views.append(view)
+
+        if expense.prepaid:
+            prepaid_views.append(view)
+            prepaid_totals = [t + a for t, a in zip(prepaid_totals, amounts, strict=True)]
+        else:
+            reimbursable_views.append(view)
+            totals = [t + a for t, a in zip(totals, amounts, strict=True)]
+
+    document_views: list[DocumentView] = []
+    for i, doc in enumerate(report.additional_documents):
+        src = report.receipts_folder / doc.file
+        ext = src.suffix.lower()
+        dest_name = f"extra_{i}{ext}"
+        shutil.copy(src, build_dir / dest_name)
+        document_views.append(
+            DocumentView(
+                label=doc.label or _humanize_filename(src.stem),
+                path=dest_name,
+                is_pdf=ext == ".pdf",
             )
         )
 
@@ -132,8 +166,10 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
         conference_name=report.conference_name,
         conference_link=report.conference_link,
         person=report.person,
+        research_group=report.research_group,
         start_date_display=report.conference_start_date.strftime(report.date_format),
         end_date_display=report.conference_end_date.strftime(report.date_format),
+        generated_date=date.today().strftime(report.date_format),
         session=report.session,
         session_link=report.session_link,
         grant_acknowledged=report.grant_acknowledged,
@@ -141,8 +177,13 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
         notes=report.notes,
         extra_notes=report.extra_notes,
         report_currencies=report_currencies,
-        expenses=expense_views,
+        expenses=reimbursable_views,
         totals=totals,
+        prepaid_expenses=prepaid_views,
+        prepaid_totals=prepaid_totals,
+        all_expenses=all_expense_views,
+        additional_documents=document_views,
+        include_signature=report.include_signature,
     )
 
     tex_path = build_dir / "report.tex"

@@ -14,9 +14,27 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{(( conference_name | latex ))}
-\rhead{Page \thepage\ of \pageref{LastPage}}
+\lhead{Expense Summary}
+\rhead{Created on (( generated_date )) -- Page \thepage\ of \pageref{LastPage}}
 \renewcommand{\headrulewidth}{0.4pt}
+
+((* macro expense_table(expense_list, totals_list, total_label, currencies) *))
+\begin{longtable}{@{}p{4cm}r((* for c in currencies *))r((* endfor *))p{4cm}@{}}
+\toprule
+\textbf{Expense} & \textbf{Paid}((* for c in currencies *)) & \textbf{(( c ))}((* endfor *)) & \textbf{Notes} \\
+\midrule
+\endhead
+((* for e in expense_list *))
+(( e.name | latex ))
+    & (( "%.2f"|format(e.cost) )) (( e.currency ))
+    ((* for amt in e.amounts *))& (( "%.2f"|format(amt) ))
+    ((* endfor *))& (( e.note | latex )) \\
+((* endfor *))
+\midrule
+\textbf{(( total_label ))} &((* for t in totals_list *)) & \textbf{(( "%.2f"|format(t) ))}((* endfor *)) & \\
+\bottomrule
+\end{longtable}
+((* endmacro *))
 
 \begin{document}
 
@@ -31,6 +49,9 @@
 
 \begin{tabular}{@{}p{4cm}p{11cm}@{}}
 \textbf{Submitted by:} & (( person | latex )) \\
+((* if research_group *))
+\textbf{Research Group:} & (( research_group | latex )) \\
+((* endif *))
 \textbf{Conference dates:} & (( start_date_display )) -- (( end_date_display )) \\
 ((* if conference_link *))
 \textbf{Conference Agenda:} & \url{(( conference_link ))} \\
@@ -50,25 +71,20 @@
 
 \textbf{Expense Summary}\\[0.5em]
 
-\begin{longtable}{@{}p{4cm}r((* for c in report_currencies *))r((* endfor *))p{4cm}@{}}
-\toprule
-\textbf{Expense} & \textbf{Paid}((* for c in report_currencies *)) & \textbf{(( c ))}((* endfor *)) & \textbf{Notes} \\
-\midrule
-\endhead
-((* for e in expenses *))
-(( e.name | latex ))
-    & (( "%.2f"|format(e.cost) )) (( e.currency ))
-    ((* for amt in e.amounts *))& (( "%.2f"|format(amt) ))
-    ((* endfor *))& (( e.note | latex )) \\
-((* endfor *))
-\midrule
-\textbf{Total} &((* for t in totals *)) & \textbf{(( "%.2f"|format(t) ))}((* endfor *)) & \\
-\bottomrule
-\end{longtable}
+(( expense_table(expenses, totals, "Total", report_currencies) ))
 
 \vspace{0.5em}
 \footnotesize Amounts converted using European Central Bank reference rates via the \href{https://frankfurter.dev/}{Frankfurter API}, using the exchange rate for each expense's purchase date.
 \normalsize
+
+((* if prepaid_expenses *))
+\vspace{1.5em}
+\textbf{Prepaid Expenses (No Reimbursement Needed)}\\[0.3em]
+\footnotesize These were paid directly (e.g. from a team/department account) and are listed here for the record only -- they are excluded from the total above.
+\normalsize\\[0.5em]
+
+(( expense_table(prepaid_expenses, prepaid_totals, "Subtotal", report_currencies) ))
+((* endif *))
 
 ((* if extra_notes *))
 \vspace{1em}
@@ -76,11 +92,20 @@
 ((* endif *))
 
 \vfill
+((* if include_signature *))
+\noindent
+\begin{tabular}{@{}p{7cm}p{5cm}@{}}
+\rule{6cm}{0.4pt} & \rule{4cm}{0.4pt} \\
+Signature & Date \\
+\end{tabular}
+\vspace{1.5em}
+
+((* endif *))
 \begin{center}
 \footnotesize Report generated with \href{https://github.com/rhysics/conferenceExpenseReports}{https://github.com/rhysics/conferenceExpenseReports}
 \end{center}
 
-((* for e in expenses *))
+((* for e in all_expenses *))
 ((* if e.invoice_path *))
 \clearpage
 \fancyhead[L]{Invoice: (( e.name | latex ))}
@@ -94,6 +119,21 @@
 \end{center}
 \vspace*{\fill}
 ((* endif *))
+((* endif *))
+((* endfor *))
+
+((* for doc in additional_documents *))
+\clearpage
+\fancyhead[L]{Attachment: (( doc.label | latex ))}
+((* if doc.is_pdf *))
+\includepdf[pages=-,pagecommand={\thispagestyle{fancy}}]{(( doc.path ))}
+((* else *))
+\thispagestyle{fancy}
+\vspace*{\fill}
+\begin{center}
+\includegraphics[width=\linewidth,height=0.85\textheight,keepaspectratio]{(( doc.path ))}
+\end{center}
+\vspace*{\fill}
 ((* endif *))
 ((* endfor *))
 
