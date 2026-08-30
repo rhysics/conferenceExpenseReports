@@ -1,4 +1,5 @@
 person: "Jane Doe"
+research group: "Prof. Smith's Testing Group"
 conference name: "Example Conference on Testing 2026"
 conference link: "https://example.org/conf2026"
 conference start date: 2026-06-01
@@ -11,6 +12,7 @@ notes: "Attended as an invited speaker."
 receipts folder: "receipts"
 date format: "%d %B %Y"
 report currencies: [CHF, USD]
+include signature: true
 
 expenses:
   a:
@@ -26,5 +28,16 @@ expenses:
     purchase date: 2026-05-15
     currency: EUR
     note: "Booked via travel agent, no invoice on file"
+  c:
+    name: "Team dinner"
+    cost: 60.00
+    purchase date: 2026-06-03
+    currency: EUR
+    prepaid: true
+    note: "Paid directly via department card"
+
+additional documents:
+  - file: "certificate.png"
+    label: "Certificate of Attendance"
 
 extra notes: "Per diem meal costs were pre-approved by the department administrator and are not itemized here."
