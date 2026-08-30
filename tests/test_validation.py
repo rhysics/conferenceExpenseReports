@@ -10,6 +10,7 @@ def _base_raw(tmp_path: Path) -> dict:
     receipts = tmp_path / "receipts"
     receipts.mkdir()
     (receipts / "flight.pdf").write_bytes(b"%PDF-1.4\n")
+    (receipts / "certificate.pdf").write_bytes(b"%PDF-1.4\n")
     return {
         "person": "Jane Doe",
         "conference name": "PyCon",
@@ -81,6 +82,27 @@ def test_non_positive_cost(tmp_path):
     raw["expenses"]["a"]["cost"] = 0
     issues = validate_report(raw, tmp_path / "report.yaml")
     assert any(i.path == "expenses.a.cost" for i in _errors(issues))
+
+
+def test_prepaid_true_is_valid(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["expenses"]["a"]["prepaid"] = True
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_prepaid_omitted_is_fine(tmp_path):
+    raw = _base_raw(tmp_path)
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_prepaid_non_boolean_warns_not_errors(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["expenses"]["a"]["prepaid"] = "yes"
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "expenses.a.prepaid" and i.level == "warning" for i in issues)
+    assert _errors(issues) == []
 
 
 def test_missing_invoice_file(tmp_path):
@@ -164,6 +186,27 @@ def test_report_currencies_multiple_is_valid(tmp_path):
     assert _errors(issues) == []
 
 
+def test_include_signature_true_is_valid(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["include signature"] = True
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_include_signature_omitted_is_fine(tmp_path):
+    raw = _base_raw(tmp_path)
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_include_signature_non_boolean_warns_not_errors(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["include signature"] = "yes"
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "include signature" and i.level == "warning" for i in issues)
+    assert _errors(issues) == []
+
+
 def test_report_currencies_must_be_a_list(tmp_path):
     raw = _base_raw(tmp_path)
     raw["report currencies"] = "USD"
@@ -183,6 +226,63 @@ def test_report_currencies_bad_code_is_an_error(tmp_path):
     raw["report currencies"] = ["USD", "wons"]
     issues = validate_report(raw, tmp_path / "report.yaml")
     assert any(i.path == "report currencies[1]" for i in _errors(issues))
+
+
+def test_research_group_is_optional_and_valid_as_a_string(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["research group"] = "ATLAS Precision EWK Group"
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_research_group_must_be_a_string(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["research group"] = 123
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "research group" for i in _errors(issues))
+
+
+def test_additional_documents_as_plain_filenames(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["additional documents"] = ["certificate.pdf"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_additional_documents_as_mappings_with_label(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["additional documents"] = [{"file": "certificate.pdf", "label": "Certificate of Attendance"}]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_additional_documents_missing_file_is_an_error(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["additional documents"] = ["missing.pdf"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any("not found" in i.message for i in _errors(issues))
+
+
+def test_additional_documents_bad_extension_is_an_error(tmp_path):
+    raw = _base_raw(tmp_path)
+    (tmp_path / "receipts" / "notes.docx").write_bytes(b"not a real docx")
+    raw["additional documents"] = ["notes.docx"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any("unsupported file type" in i.message for i in _errors(issues))
+
+
+def test_additional_documents_mapping_missing_file_key_is_an_error(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["additional documents"] = [{"label": "Certificate of Attendance"}]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "additional documents[0].file" for i in _errors(issues))
+
+
+def test_additional_documents_must_be_a_list(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["additional documents"] = "certificate.pdf"
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "additional documents" for i in _errors(issues))
 
 
 def test_unrecognized_field_warns_not_errors(tmp_path):
