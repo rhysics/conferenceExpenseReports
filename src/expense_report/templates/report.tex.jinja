@@ -18,10 +18,10 @@
 \rhead{Created on (( generated_date )) -- Page \thepage\ of \pageref{LastPage}}
 \renewcommand{\headrulewidth}{0.4pt}
 
-((* macro expense_table(expense_list, totals_list, total_label, currencies) *))
+((* macro expense_table(expense_list, totals_list, total_label, currencies, item_label="Expense", paid_label="Paid") *))
 \begin{longtable}{@{}p{4cm}r((* for c in currencies *))r((* endfor *))p{4cm}@{}}
 \toprule
-\textbf{Expense} & \textbf{Paid}((* for c in currencies *)) & \textbf{(( c ))}((* endfor *)) & \textbf{Notes} \\
+\textbf{(( item_label ))} & \textbf{(( paid_label ))}((* for c in currencies *)) & \textbf{(( c ))}((* endfor *)) & \textbf{Notes} \\
 \midrule
 \endhead
 ((* for e in expense_list *))
@@ -86,6 +86,18 @@
 (( expense_table(prepaid_expenses, prepaid_totals, "Subtotal", report_currencies) ))
 ((* endif *))
 
+((* if travel_awards *))
+\vspace{1.5em}
+\textbf{Travel Awards / Grants Received}\\[0.3em]
+\footnotesize Amounts received to offset travel costs; the net amount owed to the traveler is shown below.
+\normalsize\\[0.5em]
+
+(( expense_table(travel_awards, award_totals, "Subtotal", report_currencies, "Award", "Received") ))
+
+\vspace{1em}
+\noindent\textbf{Net Reimbursement Due:} ((* for c in report_currencies *))(( "%.2f"|format(net_totals[loop.index0]) )) (( c ))((* if not loop.last *)) / ((* endif *))((* endfor *))\par
+((* endif *))
+
 ((* if extra_notes *))
 \vspace{1em}
 \textbf{Additional notes:} (( extra_notes | latex ))
@@ -105,7 +117,7 @@ Signature & Date \\
 \footnotesize Report generated with \href{https://github.com/rhysics/conferenceExpenseReports}{https://github.com/rhysics/conferenceExpenseReports}
 \end{center}
 
-((* for e in all_expenses *))
+((* for e in invoice_items *))
 ((* if e.invoice_path *))
 \clearpage
 \fancyhead[L]{Invoice: (( e.name | latex ))}

@@ -27,6 +27,12 @@ class BuildError(RuntimeError):
 
 @dataclass
 class ExpenseView:
+    """A single row in one of the report's expense-shaped tables.
+
+    Reused as-is for reimbursable expenses, prepaid expenses, and travel
+    awards received -- all three are rendered by the same LaTeX table macro.
+    """
+
     name: str
     cost: float
     currency: str
@@ -146,6 +152,45 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
             reimbursable_views.append(view)
             totals = [t + a for t, a in zip(totals, amounts, strict=True)]
 
+    award_views: list[ExpenseView] = []
+    award_totals = [0.0] * len(report_currencies)
+
+    for award in report.travel_awards:
+        try:
+            rates, used_date = get_rates(award.date, award.currency, report_currencies, cache)
+        except FxError as exc:
+            raise BuildError(f"travel award '{award.name}': {exc}") from exc
+
+        if used_date != award.date:
+            warnings.append(f"travel award '{award.name}': no FX rate for {award.date}, used {used_date} instead")
+
+        amounts = [award.amount * rates[code] for code in report_currencies]
+        award_totals = [t + a for t, a in zip(award_totals, amounts, strict=True)]
+
+        invoice_path = None
+        invoice_is_pdf = False
+        if award.invoice:
+            src = report.receipts_folder / award.invoice
+            ext = src.suffix.lower()
+            invoice_is_pdf = ext == ".pdf"
+            dest_name = f"award_invoice_{award.key}{ext}"
+            shutil.copy(src, build_dir / dest_name)
+            invoice_path = dest_name
+
+        award_views.append(
+            ExpenseView(
+                name=award.name,
+                cost=award.amount,
+                currency=award.currency,
+                amounts=amounts,
+                note=award.note,
+                invoice_path=invoice_path,
+                invoice_is_pdf=invoice_is_pdf,
+            )
+        )
+
+    net_totals = [t - a for t, a in zip(totals, award_totals, strict=True)]
+
     document_views: list[DocumentView] = []
     for i, doc in enumerate(report.additional_documents):
         src = report.receipts_folder / doc.file
@@ -181,7 +226,10 @@ def _build(report, build_dir: Path, cache: FxCache) -> Path:
         totals=totals,
         prepaid_expenses=prepaid_views,
         prepaid_totals=prepaid_totals,
-        all_expenses=all_expense_views,
+        travel_awards=award_views,
+        award_totals=award_totals,
+        net_totals=net_totals,
+        invoice_items=all_expense_views + award_views,
         additional_documents=document_views,
         include_signature=report.include_signature,
     )

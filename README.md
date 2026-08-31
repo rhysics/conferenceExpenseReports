@@ -59,6 +59,7 @@ complete example.
 | `expenses` | yes | Mapping of arbitrary keys to expense entries (see below) |
 | `report currencies` | no | List of ISO 4217 codes controlling which converted-amount columns appear in the summary table, and in what order. Defaults to `[CHF, USD]`. See [Report currency modes](#report-currency-modes) below |
 | `additional documents` | no | List of extra files (e.g. a conference certificate) appended after the invoices — not tied to a specific expense. See below |
+| `travel awards` | no | Mapping of arbitrary keys to travel award entries (see below). See [Travel awards](#travel-awards) |
 | `include signature` | no | `true`/`false`. When true, adds a blank Signature/Date line at the bottom of page 1 for a physical signature. Defaults to `false` |
 | `extra notes` | no | Free text shown after the summary table |
 
@@ -119,6 +120,41 @@ own subtotal. Its `invoice`, if given, is still appended in the usual place
 — being prepaid only affects which table and total it counts toward, not
 whether the receipt is kept on file.
 
+### Travel awards
+
+Money received to offset the trip — a student travel grant, a conference
+bursary — isn't an expense; it's a credit against what the university owes
+you. Rather than folding it into the expense table as a negative number
+(which would invert the meaning of the "Paid" column and works around the
+`cost > 0` validation), it gets its own top-level `travel awards` mapping,
+in the same arbitrary-keys shape as `expenses`:
+
+```yaml
+travel awards:
+  a:
+    name: "Student Travel Grant"
+    amount: 200.00
+    currency: USD
+    date: 2026-05-25
+    invoice: "award_letter.pdf"
+    note: "Awarded by the conference organizers"
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `name` | yes | Shown in the awards table |
+| `amount` | yes | Numeric, in the currency received |
+| `currency` | yes | 3-letter ISO 4217 code |
+| `date` | yes | Plain YAML date; used for the FX lookup |
+| `invoice` | no | Optional supporting document (e.g. the award letter), appended in the usual invoice appendix |
+| `note` | no | Shown in the awards table's Notes column |
+
+If any `travel awards` are given, a third table ("Travel Awards / Grants
+Received") appears with its own subtotal, followed by a **Net
+Reimbursement Due** line: the main Total minus the awards subtotal, per
+currency — the actual amount owed to the traveler after awards are
+accounted for.
+
 ### Report currency modes
 
 The summary table always shows an **Expense** column, a **Paid** column (the
@@ -166,8 +202,10 @@ Page 1 is the conference summary: conference/session details, an expense
 table (Expense | Paid | one column per `report currencies` entry | Notes)
 with a totals row, a note on the FX methodology (European Central Bank
 reference rates via the Frankfurter API, linked), a second table for any
-`prepaid` expenses with its own subtotal, and a footer crediting this
-project. Every expense with an `invoice` gets its receipt appended
+`prepaid` expenses with its own subtotal, a third table for any
+`travel awards` with its own subtotal and a Net Reimbursement Due line, and
+a footer crediting this project. Every expense with an `invoice` gets its
+receipt appended
 afterward, one per page, labeled with the expense name so it's easy to match
 back to the summary table. Any `additional documents` are appended last,
 each labeled "Attachment: \<label\>". If `include signature` is set, a blank

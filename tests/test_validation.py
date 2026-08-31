@@ -291,3 +291,74 @@ def test_unrecognized_field_warns_not_errors(tmp_path):
     issues = validate_report(raw, tmp_path / "report.yaml")
     assert any(i.path == "speling mistake" and i.level == "warning" for i in issues)
     assert _errors(issues) == []
+
+
+def test_travel_awards_omitted_is_fine(tmp_path):
+    raw = _base_raw(tmp_path)
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_travel_awards_valid_entry(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = {
+        "a": {
+            "name": "Student Travel Grant",
+            "amount": 50.0,
+            "currency": "USD",
+            "date": date(2026, 5, 25),
+            "note": "From the conference organizers",
+        }
+    }
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert _errors(issues) == []
+
+
+def test_travel_awards_missing_required_field(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = {"a": {"amount": 50.0, "currency": "USD", "date": date(2026, 5, 25)}}
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "travel awards.a.name" for i in _errors(issues))
+
+
+def test_travel_awards_non_positive_amount(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = {"a": {"name": "Grant", "amount": 0, "currency": "USD", "date": date(2026, 5, 25)}}
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "travel awards.a.amount" for i in _errors(issues))
+
+
+def test_travel_awards_bad_currency(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = {"a": {"name": "Grant", "amount": 50.0, "currency": "dollars", "date": date(2026, 5, 25)}}
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "travel awards.a.currency" for i in _errors(issues))
+
+
+def test_travel_awards_invoice_must_exist(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = {
+        "a": {
+            "name": "Grant",
+            "amount": 50.0,
+            "currency": "USD",
+            "date": date(2026, 5, 25),
+            "invoice": "award_letter.pdf",
+        }
+    }
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any("not found" in i.message for i in _errors(issues))
+
+
+def test_travel_awards_empty_mapping_is_an_error(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = {}
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "travel awards" for i in _errors(issues))
+
+
+def test_travel_awards_must_be_a_mapping(tmp_path):
+    raw = _base_raw(tmp_path)
+    raw["travel awards"] = ["Student Travel Grant"]
+    issues = validate_report(raw, tmp_path / "report.yaml")
+    assert any(i.path == "travel awards" for i in _errors(issues))

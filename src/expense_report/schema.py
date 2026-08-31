@@ -32,6 +32,17 @@ class AdditionalDocument:
 
 
 @dataclass
+class TravelAward:
+    key: str
+    name: str
+    amount: float
+    date: date
+    currency: str
+    invoice: str | None = None
+    note: str | None = None
+
+
+@dataclass
 class Report:
     person: str
     conference_name: str
@@ -48,6 +59,7 @@ class Report:
     research_group: str | None = None
     report_currencies: list[str] = field(default_factory=lambda: list(DEFAULT_REPORT_CURRENCIES))
     additional_documents: list[AdditionalDocument] = field(default_factory=list)
+    travel_awards: list[TravelAward] = field(default_factory=list)
     include_signature: bool = False
     notes: str | None = None
     extra_notes: str | None = None
@@ -77,6 +89,19 @@ def parse_report(raw: dict, yaml_path: Path) -> Report:
         for item in raw.get("additional documents", [])
     ]
 
+    travel_awards = [
+        TravelAward(
+            key=str(key),
+            name=entry["name"],
+            amount=float(entry["amount"]),
+            date=entry["date"],
+            currency=entry["currency"].upper(),
+            invoice=entry.get("invoice"),
+            note=entry.get("note"),
+        )
+        for key, entry in raw.get("travel awards", {}).items()
+    ]
+
     return Report(
         person=raw["person"],
         conference_name=raw["conference name"],
@@ -93,6 +118,7 @@ def parse_report(raw: dict, yaml_path: Path) -> Report:
         research_group=raw.get("research group"),
         report_currencies=[c.upper() for c in raw.get("report currencies", DEFAULT_REPORT_CURRENCIES)],
         additional_documents=additional_documents,
+        travel_awards=travel_awards,
         include_signature=bool(raw.get("include signature", False)),
         notes=raw.get("notes"),
         extra_notes=raw.get("extra notes"),

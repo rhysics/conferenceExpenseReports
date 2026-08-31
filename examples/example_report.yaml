@@ -36,6 +36,14 @@ expenses:
     prepaid: true
     note: "Paid directly via department card"
 
+travel awards:
+  a:
+    name: "Student Travel Grant"
+    amount: 200.00
+    currency: USD
+    date: 2026-05-25
+    note: "Awarded by the conference organizers"
+
 additional documents:
   - file: "certificate.png"
     label: "Certificate of Attendance"

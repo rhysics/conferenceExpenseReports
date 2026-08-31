@@ -41,7 +41,10 @@ def _render(expenses, report_currencies=("CHF", "USD"), totals=None, **overrides
         totals=totals,
         prepaid_expenses=[],
         prepaid_totals=[0.0] * len(report_currencies),
-        all_expenses=expenses,
+        travel_awards=[],
+        award_totals=[0.0] * len(report_currencies),
+        net_totals=totals,
+        invoice_items=expenses,
         additional_documents=[],
         include_signature=False,
     )
@@ -248,7 +251,7 @@ def test_template_shows_prepaid_table_with_own_subtotal():
         totals=[95.0, 108.0],
         prepaid_expenses=[prepaid],
         prepaid_totals=[57.0, 64.8],
-        all_expenses=[reimbursable, prepaid],
+        invoice_items=[reimbursable, prepaid],
     )
 
     assert "Prepaid Expenses" in tex
@@ -271,7 +274,66 @@ def test_template_prepaid_invoice_still_appears_in_appendix():
         invoice_path="invoice_c.pdf",
         invoice_is_pdf=True,
     )
-    tex = _render([], prepaid_expenses=[prepaid], all_expenses=[prepaid])
+    tex = _render([], prepaid_expenses=[prepaid], invoice_items=[prepaid])
     assert r"\includepdf" in tex
     assert "invoice_c.pdf" in tex
     assert "Invoice: Team dinner" in tex
+
+
+def test_template_omits_travel_awards_table_when_none():
+    tex = _render([], travel_awards=[])
+    assert "Travel Awards" not in tex
+    assert "Net Reimbursement Due" not in tex
+
+
+def test_template_shows_travel_awards_table_and_net_line():
+    expense = ExpenseView(
+        name="Flight",
+        cost=100.0,
+        currency="EUR",
+        amounts=[95.0, 108.0],
+        note=None,
+        invoice_path=None,
+        invoice_is_pdf=False,
+    )
+    award = ExpenseView(
+        name="Student Travel Grant",
+        cost=50.0,
+        currency="USD",
+        amounts=[46.5, 50.0],
+        note="From the conference organizers",
+        invoice_path=None,
+        invoice_is_pdf=False,
+    )
+    tex = _render(
+        [expense],
+        totals=[95.0, 108.0],
+        travel_awards=[award],
+        award_totals=[46.5, 50.0],
+        net_totals=[48.5, 58.0],
+    )
+
+    assert "Travel Awards" in tex
+    assert "Student Travel Grant" in tex
+    assert r"\textbf{Received}" in tex
+    assert r"\textbf{Subtotal}" in tex
+    assert "46.50" in tex
+    assert "Net Reimbursement Due" in tex
+    assert "48.50 CHF" in tex
+    assert "58.00 USD" in tex
+
+
+def test_template_award_invoice_still_appears_in_appendix():
+    award = ExpenseView(
+        name="Student Travel Grant",
+        cost=50.0,
+        currency="USD",
+        amounts=[46.5, 50.0],
+        note=None,
+        invoice_path="award_invoice_a.pdf",
+        invoice_is_pdf=True,
+    )
+    tex = _render([], travel_awards=[award], invoice_items=[award])
+    assert r"\includepdf" in tex
+    assert "award_invoice_a.pdf" in tex
+    assert "Invoice: Student Travel Grant" in tex
