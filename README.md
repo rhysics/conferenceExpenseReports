@@ -115,10 +115,12 @@ expenses:
 
 Any expense with `prepaid: true` is moved out of the main "Expense Summary"
 table (and its **Total**, which is what's actually owed to the traveler)
-into a second "Prepaid Expenses (No Reimbursement Needed)" table with its
-own subtotal. Its `invoice`, if given, is still appended in the usual place
-— being prepaid only affects which table and total it counts toward, not
-whether the receipt is kept on file.
+onto its own page — a "Prepaid Expenses (No Reimbursement Needed)" table
+with its own subtotal, placed right after the main reimbursement page so it
+doesn't interrupt the Total → Travel Awards → Net Reimbursement Due flow.
+Its `invoice`, if given, is still appended in the usual place — being
+prepaid only affects which page/total it counts toward, not whether the
+receipt is kept on file.
 
 ### Travel awards
 
@@ -198,20 +200,24 @@ tailor per report.
 
 ## Output
 
-Page 1 is the conference summary: conference/session details, an expense
-table (Expense | Paid | one column per `report currencies` entry | Notes)
-with a totals row, a note on the FX methodology (European Central Bank
-reference rates via the Frankfurter API, linked), a second table for any
-`prepaid` expenses with its own subtotal, a third table for any
-`travel awards` with its own subtotal and a Net Reimbursement Due line, and
-a footer crediting this project. Every expense with an `invoice` gets its
-receipt appended
-afterward, one per page, labeled with the expense name so it's easy to match
-back to the summary table. Any `additional documents` are appended last,
-each labeled "Attachment: \<label\>". If `include signature` is set, a blank
-Signature/Date line appears at the bottom of page 1. Every page's header
-shows "Created on \<date\>" alongside the page count, so a printed or
-re-shared copy always carries its generation date.
+Page 1 holds everything that determines what's actually owed to the
+traveler: conference/session details, the expense table (Expense | Paid |
+one column per `report currencies` entry | Notes) with a totals row, a note
+on the FX methodology (European Central Bank reference rates via the
+Frankfurter API, linked), a table for any `travel awards` with its own
+subtotal and a Net Reimbursement Due line, any `extra notes`, and (if
+`include signature` is set) a blank Signature/Date line — bounded by the
+report title above and the signature below, with a footer crediting this
+project.
+
+Any `prepaid` expenses go on their own page right after that, in a table
+with its own subtotal — informational only, since they don't affect the
+reimbursement total. After that, every expense with an `invoice` gets its
+receipt appended, one per page, labeled with the expense name so it's easy
+to match back to the summary table, followed by any `additional documents`,
+each labeled "Attachment: \<label\>". Every page's header shows
+"Created on \<date\>" alongside the page count, so a printed or re-shared
+copy always carries its generation date.
 
 ## Development
 

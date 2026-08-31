@@ -77,15 +77,6 @@
 \footnotesize Amounts converted using European Central Bank reference rates via the \href{https://frankfurter.dev/}{Frankfurter API}, using the exchange rate for each expense's purchase date.
 \normalsize
 
-((* if prepaid_expenses *))
-\vspace{1.5em}
-\textbf{Prepaid Expenses (No Reimbursement Needed)}\\[0.3em]
-\footnotesize These were paid directly (e.g. from a team/department account) and are listed here for the record only -- they are excluded from the total above.
-\normalsize\\[0.5em]
-
-(( expense_table(prepaid_expenses, prepaid_totals, "Subtotal", report_currencies) ))
-((* endif *))
-
 ((* if travel_awards *))
 \vspace{1.5em}
 \textbf{Travel Awards / Grants Received}\\[0.3em]
@@ -116,6 +107,16 @@ Signature & Date \\
 \begin{center}
 \footnotesize Report generated with \href{https://github.com/rhysics/conferenceExpenseReports}{https://github.com/rhysics/conferenceExpenseReports}
 \end{center}
+
+((* if prepaid_expenses *))
+\clearpage
+\fancyhead[L]{Prepaid Expenses}
+\textbf{Prepaid Expenses (No Reimbursement Needed)}\\[0.3em]
+\footnotesize These were paid directly (e.g. from a team/department account) and are listed here for the record only -- they are excluded from the reimbursement total on the previous page.
+\normalsize\\[0.5em]
+
+(( expense_table(prepaid_expenses, prepaid_totals, "Subtotal", report_currencies) ))
+((* endif *))
 
 ((* for e in invoice_items *))
 ((* if e.invoice_path *))
